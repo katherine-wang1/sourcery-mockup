@@ -1,4 +1,11 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>[hidden]{display:none!important}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}</style>
+</head>
+<body>
 <title>Sourcery Process Prototype</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,9 +40,9 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .view{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 40px}
 
 /* ---------- home ---------- */
-.view.home{padding-left:max(clamp(24px,8vw,140px),env(safe-area-inset-left,0px));padding-right:max(clamp(24px,8vw,140px),env(safe-area-inset-right,0px));padding-block:48px 64px}
-.home-title{max-width:1100px;margin:0 auto 44px;font-size:clamp(26px,3.4vw,36px);letter-spacing:-.02em;text-wrap:balance}
-.grid-wrap{position:relative;max-width:1100px;margin:0 auto}
+.view.home{padding-left:max(clamp(24px,8vw,140px),env(safe-area-inset-left,0px));padding-right:max(clamp(24px,8vw,140px),env(safe-area-inset-right,0px));padding-block:48px 64px;min-height:calc(100vh - 62px);box-sizing:border-box;display:flex;flex-direction:column}
+.home-title{max-width:1100px;margin:0 auto 32px;text-align:center;font-size:clamp(26px,3.4vw,36px);letter-spacing:-.02em;text-wrap:balance}
+.grid-wrap{position:relative;width:100%;max-width:1100px;margin:auto}
 .grid8{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:56px 56px;list-style:none;padding:0;margin:0}
 .grid8 li{position:relative;min-width:0}
 .grid8 li:not(:nth-child(4n))::after{content:"";position:absolute;top:50%;right:-50px;width:44px;height:2px;border-top:3px dashed var(--line)}
@@ -736,4 +743,5 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 })();
 </script>
 
-</body></html>
+</body>
+</html>
