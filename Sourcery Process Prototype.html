@@ -1,0 +1,739 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Sourcery Process Prototype</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a single whiteboard (white, dot grid) with three views routed on the hash: overview, step walk-through, full board. Deliberately light-only, like a real whiteboard. */
+:root{
+  --board:#FFFFFF; --dots:#E4E1EC; --ink:#24212E; --line:#3A3550; --muted:#5F5A73; --hand:#5A5470;
+  --acc:#6E5BB5; --acc2:#4D3F8C; --sv:#B1A7D3; --you:#EEEEEE; --tint:#EEEAF8; --row:#F4F3F8; --rule:#E6E3EF;
+  --chrome:#F7F6FB; --dot:#D6D2E4; --ok:#2F7D4F; --warn:#9A3412; --warnbg:#FFF6EE; --warnline:#F0C9A8; --risk:#C2410C;
+  --cad:#2F5E9E; --cadthin:#8AA6CC; --cadbg:#F7F9FC; --paper:#FFFFFF; --soft:#8C84AE;
+  --f-hand:"Caveat","Comic Sans MS",cursive; --f-ui:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+html,body{background:var(--board)}
+body{color:var(--ink);font-family:var(--f-ui);background-image:radial-gradient(var(--dots) 1.2px,transparent 1.2px);background-size:28px 28px;min-height:100vh}
+a{color:var(--acc2)}
+button{font-family:inherit}
+:focus-visible{outline:3px solid var(--acc);outline-offset:3px}
+
+/* ---------- top bar ---------- */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:rgba(255,255,255,.92);backdrop-filter:blur(4px);border-bottom:1.5px dashed var(--dot);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:10px;display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--board)}
+.brand{font-weight:700;font-size:18px;letter-spacing:-.01em;color:var(--ink);text-decoration:none}
+.brand span{font-family:var(--f-hand);font-weight:500;font-size:20px;color:var(--acc);margin-left:6px}
+.nav{display:flex;gap:6px;flex-wrap:wrap}
+.nav a{font-size:14px;font-weight:500;color:var(--muted);text-decoration:none;padding:7px 12px;border-radius:9px;border:1.5px solid transparent}
+.nav a[aria-current="page"]{color:var(--ink);border-color:var(--line);background:var(--paper)}
+.nav a:hover{color:var(--ink)}
+
+.view{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 40px}
+
+/* ---------- home ---------- */
+.view.home{padding-left:max(clamp(24px,8vw,140px),env(safe-area-inset-left,0px));padding-right:max(clamp(24px,8vw,140px),env(safe-area-inset-right,0px));padding-block:48px 64px}
+.home-title{max-width:1100px;margin:0 auto 44px;font-size:clamp(26px,3.4vw,36px);letter-spacing:-.02em;text-wrap:balance}
+.grid-wrap{position:relative;max-width:1100px;margin:0 auto}
+.grid8{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:56px 56px;list-style:none;padding:0;margin:0}
+.grid8 li{position:relative;min-width:0}
+.grid8 li:not(:nth-child(4n))::after{content:"";position:absolute;top:50%;right:-50px;width:44px;height:2px;border-top:3px dashed var(--line)}
+.grid8 li:not(:nth-child(4n))::before{content:"";position:absolute;top:calc(50% - 6px);right:-52px;border:7px solid transparent;border-left:10px solid var(--line);border-right:0}
+.card{position:relative;display:flex;align-items:center;justify-content:center;text-align:center;min-height:128px;height:100%;box-sizing:border-box;padding:30px 26px 22px;border:2px solid var(--line);border-radius:16px;background:var(--paper);
+  box-shadow:5px 5px 0 rgba(58,53,80,.12);text-decoration:none;color:var(--ink);font-size:19px;line-height:1.3;text-wrap:balance;transition:transform .15s,box-shadow .15s}
+.card:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 rgba(58,53,80,.16)}
+.num{position:absolute;top:10px;left:10px;width:26px;height:26px;border-radius:50%;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;background:var(--paper)}
+.wrap45{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.wrap45 #p45{fill:none;stroke:var(--line);stroke-width:3;stroke-dasharray:10 6;stroke-linecap:round}
+.wrap45 #h45{fill:var(--line)}
+@media (max-width:1000px){.grid8{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}.grid8 li::after,.grid8 li::before{display:none}.wrap45{display:none}}
+@media (max-width:560px){.grid8{grid-template-columns:minmax(0,1fr)}}
+
+/* ---------- step page ---------- */
+.dock{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:25;display:flex;flex-direction:column;align-items:center;gap:8px;max-width:calc(100vw - 32px)}
+.strip{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;align-items:center;background:rgba(255,255,255,.9);border-radius:12px;padding:3px 6px}
+.strip::before{content:"jump to step";font-size:11px;color:var(--muted);margin-right:4px}
+.strip a{width:24px;height:24px;border-radius:50%;border:1px solid var(--dot);display:flex;align-items:center;justify-content:center;font-weight:500;font-size:11px;text-decoration:none;color:var(--muted);background:var(--paper)}
+.strip a:hover{border-color:var(--soft);color:var(--ink)}
+.strip a[aria-current="step"]{border-color:var(--soft);background:var(--tint);color:var(--acc2);font-weight:600}
+.canvas-wrap{overflow-x:auto;padding-bottom:170px}
+.canvas-wrap .step-root{margin:0 auto}
+.controls{display:flex;gap:8px;align-items:center;
+  background:var(--paper);border:2px solid var(--line);border-radius:16px;padding:8px;box-shadow:5px 5px 0 rgba(58,53,80,.14);max-width:calc(100vw - 32px);box-sizing:border-box}
+.controls button{height:44px;padding:0 16px;border-radius:10px;border:1.5px solid var(--sv);background:var(--paper);color:var(--acc2);font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}
+.controls button.play{background:var(--acc);border-color:var(--acc);color:#fff;min-width:110px}
+.controls button:disabled{opacity:.4;cursor:default}
+.controls .where{font-family:var(--f-hand);font-size:20px;color:var(--hand);padding:0 6px;white-space:nowrap}
+.keys{text-align:center;font-size:12px;color:var(--muted);margin-top:-8px;margin-bottom:12px}
+.keys kbd{font-family:inherit;border:1px solid var(--dot);border-bottom-width:2px;border-radius:4px;padding:0 5px;background:var(--paper)}
+
+/* ---------- board page ---------- */
+.board-bar{display:flex;flex-wrap:wrap;gap:10px 24px;align-items:flex-end;margin-bottom:14px}
+.board-bar h1{margin:0;font-size:26px;letter-spacing:-.02em}
+.board-bar h1 span{color:var(--acc);font-weight:500}
+.legend{display:flex;gap:16px;align-items:center;font-size:14px;color:var(--line);flex-wrap:wrap}
+.legend i{display:inline-block;width:26px;height:16px;border-radius:5px;border:2px solid #555;vertical-align:-3px;margin-right:6px}
+.zoom{margin-left:auto;display:flex;gap:6px}
+.zoom button{height:36px;padding:0 12px;border-radius:9px;border:1.5px solid var(--sv);background:var(--paper);color:var(--acc2);font-weight:600;cursor:pointer}
+.zoom button[aria-pressed="true"]{background:var(--acc);color:#fff;border-color:var(--acc)}
+.board-scroll{overflow:auto;border:1.5px dashed var(--dot);border-radius:12px;background:transparent}
+.board{position:relative;width:6940px;height:1000px;transform-origin:0 0}
+.board .step-root{position:absolute;top:0}
+
+/* ---------- step building blocks ---------- */
+.step-root{position:relative;width:760px;font-family:var(--f-ui);color:var(--ink)}
+.step-root *{box-sizing:border-box}
+.a{position:absolute}
+.stage{position:absolute;inset:0;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .35s}
+.stage.shown{opacity:1;visibility:visible;pointer-events:auto}
+.pill{position:absolute;left:120px;top:10px;width:520px;height:60px;border:2px solid #555;border-radius:14px;background:var(--sv);display:flex;align-items:center;justify-content:center;gap:12px;font-size:18px;white-space:nowrap;padding:0 10px}
+.pill.you{background:var(--you)}
+.pill b{flex:none;width:28px;height:28px;border-radius:50%;background:#fff;border:2px solid #555;font-size:14px;display:flex;align-items:center;justify-content:center}
+.win{position:absolute;left:120px;width:520px;border:2px solid var(--line);border-radius:14px;background:var(--paper);box-shadow:5px 5px 0 rgba(58,53,80,.12);overflow:hidden;display:flex;flex-direction:column}
+.chrome{height:30px;flex:none;display:flex;align-items:center;gap:7px;padding:0 12px;border-bottom:1px solid var(--rule);background:var(--chrome);font-size:12px;color:var(--muted)}
+.chrome i{width:8px;height:8px;border-radius:50%;background:var(--dot)}
+.chrome span{margin-left:4px}
+.wb{flex:1;padding:12px 16px;display:flex;flex-direction:column;gap:10px;min-height:0}
+.grp{display:flex;flex-direction:column;gap:5px}
+.sec{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--muted);gap:8px}
+.sec .k{font-weight:700;letter-spacing:.06em;color:var(--acc)}
+.okt{font-weight:700;color:var(--ok);font-size:13px}
+.row{display:flex;gap:8px;align-items:center;font-size:13px;padding:6px 10px;border-radius:7px;background:var(--row)}
+.row .f{flex:1;min-width:0}
+.th{display:flex;gap:8px;font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--acc);padding:0 10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;font-size:12px}
+.chip{padding:4px 9px;border-radius:12px;background:var(--row);border:1px solid var(--rule)}
+.a.chip{font-size:12px;white-space:nowrap}
+.chip.pick{background:var(--tint);border-color:var(--sv)}
+.searchbox{position:relative;overflow:hidden;height:30px;border:1px solid var(--dot);border-radius:8px;display:flex;align-items:center;padding:0 10px;font-size:13px;color:var(--line)}
+.scan{position:absolute;top:0;bottom:0;left:-35%;width:35%;background:linear-gradient(90deg,rgba(110,91,181,0),rgba(110,91,181,.25),rgba(110,91,181,0))}
+.stat{flex:1;border-radius:9px;background:var(--tint);border:1px solid var(--sv);padding:6px 12px;display:flex;flex-direction:column;gap:2px}
+.stat .k{font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--acc2)}
+.meter{display:flex;gap:3px}.meter i{width:22px;height:8px;border-radius:2px;background:var(--rule)}
+.alert{border:1px solid var(--warnline);background:var(--warnbg);border-radius:9px;padding:8px 10px;font-size:12px;line-height:1.4}
+.alert b{display:block;font-size:13px}
+.btns{display:flex;gap:8px}
+.btn{flex:1;height:36px;border-radius:8px;font-size:12px;font-weight:600;border:1px solid var(--sv);background:var(--paper);color:var(--acc2);display:flex;align-items:center;justify-content:center}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+.opt{position:relative;padding:4px 9px;border-radius:7px;border:1px solid var(--dot);white-space:nowrap}
+.opt .fill{position:absolute;inset:-1px;border-radius:7px;background:var(--acc);color:#fff;font-weight:600;padding:4px 9px;white-space:nowrap}
+.opt.risky{border-color:var(--warnline);background:var(--warnbg);color:var(--warn)}
+.bubble{position:absolute;font-size:12px;line-height:1.4;padding:9px 11px}
+.hand{position:absolute;font-family:var(--f-hand);color:var(--hand);line-height:1.05}
+.sublab{position:absolute;font-family:var(--f-hand);font-size:24px;line-height:1;color:var(--acc2)}
+.sublab b{font-weight:700}
+.cap{position:absolute;left:0;width:760px;text-align:center;font-family:var(--f-hand);font-size:25px;color:var(--acc2);padding:0 20px}
+.ic{position:absolute;fill:none;stroke:var(--line);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;overflow:visible}
+.ic.p{stroke:var(--acc)}
+.ic.w{fill:#fff}
+.cad{fill:none;stroke:var(--cad);stroke-width:2;stroke-linejoin:round}
+.cadthin{fill:none;stroke:var(--cadthin);stroke-width:1}
+.route{fill:none;stroke:var(--soft);stroke-width:3;stroke-dasharray:7 7;stroke-linecap:round}
+.tag{font-size:12px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--acc);color:#fff;white-space:nowrap}
+.tag.g{background:var(--ok)}
+.flag{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:3px 8px;border-radius:8px;background:var(--warnbg);border:1.5px solid var(--risk);color:var(--warn);white-space:nowrap}
+.ask{font-family:var(--f-hand);font-size:19px;color:var(--acc);background:#fff;border:1.5px solid var(--acc);border-radius:10px;padding:0 8px;white-space:nowrap}
+.press{position:relative;width:168px;height:40px;border:none;border-radius:9px;color:#fff;font-size:13px;font-weight:600;background:var(--acc)}
+.press span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+
+/* ---------- play-once animation model ----------
+   idle (revealed, not played) -> .playing (runs once) -> .done (final state holds) */
+.tok{opacity:0}
+.ap{opacity:0}
+.lbl{opacity:0}
+.bar{width:0}
+.draw{stroke-dasharray:700;stroke-dashoffset:700}
+.truck{offset-path:path('M185 495 C 280 470, 460 520, 565 492');offset-rotate:0deg;offset-distance:0%}
+.cursor{opacity:0}
+.bt2{opacity:0}
+
+.done .ap,.done .tok.stay{opacity:1}
+.done .bar{width:var(--w)}
+.done .draw{stroke-dashoffset:0}
+.done .truck{offset-distance:100%}
+.done .press{background:var(--ok)}
+.done .bt1{opacity:0}.done .bt2{opacity:1}
+
+.playing .tok{animation:fly var(--d,1.4s) ease-in-out var(--t,0s) both}
+.playing .tok.stay{animation-name:flyStay}
+.playing .ap{animation:appear .5s ease-out var(--t,0s) both}
+.playing .lbl{animation:blip var(--d,2s) ease var(--t,0s) both}
+.playing .bar{animation:grow 1.6s ease-out var(--t,0s) both}
+.playing .draw{animation:draw 2.4s ease-in-out var(--t,0s) both}
+.playing .scan{animation:scan 1.3s linear var(--t,0s) 2 both}
+.playing .truck{animation:drive 3s ease-in-out var(--t,0s) both}
+.playing .cursor{animation:cur 1.4s ease-in-out var(--t,0s) both}
+.playing .press{animation:press 1.4s ease-in-out var(--t,0s) both}
+.playing .bt1{animation:hide .2s linear calc(var(--t,0s) + 1.15s) both}
+.playing .bt2{animation:appear .2s linear calc(var(--t,0s) + 1.15s) both}
+
+@keyframes fly{0%{opacity:0;transform:translate(var(--fx),var(--fy))}12%{opacity:1;transform:translate(var(--fx),var(--fy))}78%{opacity:1;transform:none}100%{opacity:0;transform:none}}
+@keyframes flyStay{0%{opacity:0;transform:translate(var(--fx),var(--fy))}12%{opacity:1;transform:translate(var(--fx),var(--fy))}100%{opacity:1;transform:none}}
+@keyframes appear{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes hide{from{opacity:1}to{opacity:0}}
+@keyframes blip{0%{opacity:0}15%{opacity:1}80%{opacity:1}100%{opacity:0}}
+@keyframes grow{from{width:0}to{width:var(--w)}}
+@keyframes draw{from{stroke-dashoffset:700}to{stroke-dashoffset:0}}
+@keyframes scan{from{left:-35%}to{left:105%}}
+@keyframes drive{from{offset-distance:0%}to{offset-distance:100%}}
+@keyframes cur{0%{opacity:0;transform:translate(70px,46px)}15%{opacity:1;transform:translate(70px,46px)}68%{opacity:1;transform:none}76%{opacity:1;transform:scale(.82)}86%{opacity:1;transform:none}100%{opacity:0;transform:none}}
+@keyframes press{0%,74%{background:var(--acc)}80%{background:var(--acc2)}100%{background:var(--ok)}}
+@media (prefers-reduced-motion:reduce){.playing *{animation-duration:.01s!important;animation-delay:0s!important;animation-iteration-count:1!important}.stage{transition:none}}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-factory" viewBox="0 0 56 48"><path d="M3 45 L3 22 L16 30 L16 20 L29 28 L29 8 L38 8 L38 45 Z M38 45 L53 45 L53 18 L38 18 M8 38 L12 38 M20 38 L24 38 M44 28 L48 28 M44 36 L48 36"/></symbol>
+  <symbol id="i-ware" viewBox="0 0 70 52"><path d="M4 49 L4 22 L35 5 L66 22 L66 49 Z M20 49 L20 30 L50 30 L50 49 M20 37 L50 37 M20 43 L50 43"/></symbol>
+  <symbol id="i-person" viewBox="0 0 64 72"><circle cx="32" cy="18" r="13"/><path d="M8 68 C 8 42, 56 42, 56 68"/></symbol>
+  <symbol id="i-team" viewBox="0 0 96 54"><circle cx="20" cy="16" r="9"/><path d="M4 50 C 4 32, 36 32, 36 50"/><circle cx="48" cy="12" r="10"/><path d="M30 50 C 30 28, 66 28, 66 50"/><circle cx="76" cy="16" r="9"/><path d="M60 50 C 60 32, 92 32, 92 50"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 74 62"><path d="M4 12 L26 12 L32 19 L70 19 L70 58 L4 58 Z M4 26 L70 26"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 30 20"><rect x="1.5" y="1.5" width="27" height="17" rx="2"/><path d="M2 3 L15 12 L28 3"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 26 32"><path d="M3 2 L17 2 L23 8 L23 30 L3 30 Z M7 13 L19 13 M7 19 L19 19"/></symbol>
+  <symbol id="i-box" viewBox="0 0 32 34"><path d="M4 10 L16 4 L28 10 L28 24 L16 30 L4 24 Z M4 10 L16 16 L28 10 M16 16 L16 30"/></symbol>
+  <symbol id="i-lab" viewBox="0 0 64 54"><path d="M4 51 L4 18 L34 18 L34 6 L60 6 L60 51 Z M26 51 L26 37 L38 37 L38 51 M42 14 L52 14 M42 24 L52 24"/></symbol>
+  <symbol id="i-mag" viewBox="0 0 60 60"><circle cx="24" cy="24" r="16"/><path d="M36 36 L54 54"/></symbol>
+  <symbol id="i-truck" viewBox="0 0 40 26"><path d="M2 4 L25 4 L25 20 L2 20 Z M25 9 L33 9 L38 15 L38 20 L25 20 Z"/><circle cx="9" cy="21" r="3.5"/><circle cx="31" cy="21" r="3.5"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 44"><path d="M12 2 L12 40 M4 32 L12 41 L20 32"/></symbol>
+  <symbol id="i-cursor" viewBox="0 0 22 26"><path d="M2 2 L2 21 L7 16 L11 24 L14 22.5 L10 15 L17 15 Z"/></symbol>
+</svg>
+
+<header class="top">
+  <nav class="nav" aria-label="Views">
+    <a href="#home" data-nav="home">Process overview</a>
+    <a href="#step-1" data-nav="step">Walk through steps</a>
+    <a href="#board" data-nav="board">Full whiteboard</a>
+  </nav>
+</header>
+
+<main>
+  <section id="v-home" class="view home" hidden>
+    <h1 class="home-title">CAD-to-Production Process at a very high level</h1>
+    <div class="grid-wrap">
+      <ol class="grid8" id="grid8"></ol>
+      <svg class="wrap45" id="wrap45" aria-hidden="true"><path id="p45" d=""/><path id="h45" d=""/></svg>
+    </div>
+  </section>
+
+  <section id="v-step" class="view" hidden>
+    <div class="canvas-wrap" id="stepCanvas"></div>
+    <div class="dock">
+      <div class="controls" role="toolbar" aria-label="Step controls">
+        <button type="button" id="bBack">← Back</button>
+        <button type="button" class="play" id="bPlay">▶ Play</button>
+        <button type="button" id="bNext">Next →</button>
+        <span class="where" id="where"></span>
+      </div>
+      <nav class="strip" id="strip" aria-label="Jump to step"></nav>
+    </div>
+  </section>
+
+  <section id="v-board" class="view" hidden>
+    <div class="board-bar">
+      <h1>Sourcery <span>· design to delivery, end to end</span></h1>
+      <div class="legend"><span><i style="background:var(--you)"></i>You do this</span><span><i style="background:var(--sv)"></i>Sourcery handles it</span></div>
+      <div class="zoom" role="group" aria-label="Zoom">
+        <button type="button" data-z="0.5">50%</button>
+        <button type="button" data-z="0.75" aria-pressed="true">75%</button>
+        <button type="button" data-z="1">100%</button>
+      </div>
+    </div>
+    <div class="board-scroll"><div id="boardSize"><div class="board" id="board"></div></div></div>
+  </section>
+</main>
+
+<!-- ======================= STEP TEMPLATES ======================= -->
+
+<template id="t1">
+<div class="step-root" style="height:620px">
+  <div class="pill you"><b>1</b>You create CAD &amp; Drawings</div>
+  <div class="stage" data-s="0">
+    <svg class="ic" style="left:22px;top:180px" width="64" height="72"><use href="#i-person"/></svg>
+    <div class="hand" style="left:36px;top:252px;font-size:22px">you</div>
+    <svg class="ic" style="left:80px;top:196px" width="40" height="24" viewBox="0 0 40 24"><path d="M2 14 C 12 6, 24 6, 34 12 M27 6 L35 12 L27 17"/></svg>
+    <div class="win" style="top:90px;height:340px">
+      <div class="chrome" style="background:#F2F2F2"><i></i><i></i><i></i><span>CAD · shoulder_module.asm</span></div>
+      <div style="flex:1;display:flex;min-height:0">
+        <div style="width:40px;flex:none;border-right:1px solid #E3E3E3;background:#FAFAFA;display:flex;flex-direction:column;gap:10px;align-items:center;padding-top:12px">
+          <div style="width:18px;height:18px;border:2px solid #9A9A9A;border-radius:3px"></div>
+          <div style="width:18px;height:18px;border:2px solid #9A9A9A;border-radius:50%"></div>
+          <div style="width:18px;height:18px;border:2px solid var(--acc);border-radius:3px;background:var(--tint)"></div>
+        </div>
+        <div style="flex:1;position:relative;background:var(--cadbg);background-image:linear-gradient(#E7ECF4 1px,transparent 1px),linear-gradient(90deg,#E7ECF4 1px,transparent 1px);background-size:20px 20px">
+          <svg class="a" style="left:20px;top:14px" width="300" height="230" viewBox="0 0 300 230" aria-hidden="true">
+            <path class="cad draw" d="M30 190 L30 60 L120 60 L120 30 L260 30 L260 120 L180 120 L180 190 Z"/>
+            <circle class="cad draw" cx="220" cy="75" r="22" style="--t:.6s"/>
+            <circle class="cad draw" cx="75" cy="150" r="10" style="--t:1s"/>
+            <circle class="cad draw" cx="135" cy="150" r="10" style="--t:1.2s"/>
+            <g class="ap" style="--t:2.2s"><path class="cadthin" d="M30 210 L180 210 M30 204 L30 216 M180 204 L180 216"/></g>
+          </svg>
+          <div class="a ap" style="left:96px;top:230px;font-size:11px;color:var(--cad);--t:2.3s">84.0</div>
+          <div class="a ap" style="right:10px;bottom:10px;width:132px;border:1px solid var(--cad);background:#fff;font-size:10px;color:var(--cad);--t:2.6s">
+            <div style="padding:4px 6px;border-bottom:1px solid var(--cad);font-weight:700">SHOULDER BRACKET</div>
+            <div style="display:flex"><div style="padding:3px 6px;border-right:1px solid var(--cad);flex:1">AL 6061-T6</div><div style="padding:3px 6px">REV B</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="cap" style="top:470px">you design as usual. Sourcery starts from your files.</div>
+</div>
+</template>
+
+<template id="t2">
+<div class="step-root" style="height:620px">
+  <div class="pill"><b>2</b>Upload documentation package to portal</div>
+  <div class="stage" data-s="0">
+    <svg class="ic" style="left:-66px;top:199px" width="74" height="62"><use href="#i-folder"/></svg>
+    <div class="hand" style="left:-74px;top:263px;font-size:21px">your design files</div>
+    <div class="win" style="top:90px;height:340px">
+      <div class="chrome"><i></i><i></i><i></i><span>sourcery › arm v2 › new request</span></div>
+      <div class="wb" style="padding-top:14px">
+        <div style="height:78px;border:2px dashed var(--sv);border-radius:10px;background:#FAF9FD;padding:6px 10px;font-size:12px;color:var(--muted)">Drop design package here</div>
+        <div class="grp">
+          <div class="sec"><span>Reading parts &amp; design intent</span><span>BOM · drawings · schedule</span></div>
+          <div style="height:6px;border-radius:3px;background:var(--tint);overflow:hidden"><div class="bar" style="--w:100%;--t:2.3s;height:6px;background:var(--acc);border-radius:3px"></div></div>
+        </div>
+        <div class="grp" style="gap:6px">
+          <div class="row ap" style="--t:4s;background:var(--tint)"><span class="f" style="font-weight:600">14 line items</span><span>3 custom · 11 off-the-shelf</span></div>
+          <div class="row ap" style="--t:4.2s"><span class="f">Need by</span><span style="font-weight:600">Dec 12 build (team schedule)</span></div>
+          <div class="row ap" style="--t:4.4s"><span class="f">Critical feature</span><span style="font-weight:600">Ø45 bearing bore, H7</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="a tok stay chip" style="left:138px;top:170px;background:#fff;border:1.5px solid var(--acc);border-radius:6px;--fx:-186px;--fy:35px;--d:1.6s">shoulder_module.step</div>
+    <div class="a tok stay chip" style="left:292px;top:170px;background:#fff;border:1.5px solid var(--acc);border-radius:6px;--fx:-340px;--fy:35px;--d:1.6s;--t:.5s">bracket_REV-B.pdf</div>
+    <div class="a tok stay chip" style="left:434px;top:170px;background:#fff;border:1.5px solid var(--acc);border-radius:6px;--fx:-482px;--fy:35px;--d:1.6s;--t:1s">BOM_arm-v2.csv</div>
+    <svg class="a tok" style="left:250px;top:184px;--fx:-186px;--fy:35px;--d:1.6s" width="22" height="26" viewBox="0 0 22 26"><use href="#i-cursor" style="fill:var(--ink);stroke:#fff;stroke-width:1.5"/></svg>
+  </div>
+  <div class="cap" style="top:470px">drag &amp; drop, no forms. It reads the parts, design intent &amp; build date.</div>
+</div>
+</template>
+
+<template id="t3">
+<div class="step-root" style="height:980px">
+  <div class="pill"><b>3</b>Find suppliers for custom &amp; off-the-shelf parts</div>
+
+  <div class="stage" data-s="0">
+    <div class="sublab" style="left:6px;top:150px;width:104px"><b>3a</b><br>search</div>
+    <div class="win" style="top:90px;height:176px">
+      <div class="chrome"><i></i><i></i><i></i></div>
+      <div class="wb" style="gap:12px">
+        <div class="grp"><div class="sec"><span class="k">CUSTOM · 3 PARTS</span><span>bracket · motor plate · cover</span></div>
+          <div class="searchbox">Searching machine &amp; sheet-metal shops…<div class="scan"></div></div></div>
+        <div class="grp"><div class="sec"><span class="k">OFF-THE-SHELF · 11 PARTS</span><span>bearings · fasteners · actuators</span></div>
+          <div class="searchbox">Searching distributors &amp; catalogs…<div class="scan" style="--t:.4s"></div></div></div>
+      </div>
+    </div>
+    <svg class="ic p" style="left:662px;top:130px" width="60" height="60"><use href="#i-mag"/></svg>
+    <div class="hand" style="left:648px;top:194px;width:110px;font-size:20px">40+ shops &amp; catalogs</div>
+  </div>
+
+  <div class="stage" data-s="1">
+    <svg class="ic" style="left:368px;top:286px" width="24" height="44"><use href="#i-down"/></svg>
+    <div class="sublab" style="left:6px;top:410px;width:104px"><b>3b</b><br>identify</div>
+    <div class="win" style="top:350px;height:176px">
+      <div class="chrome"><i></i><i></i><i></i></div>
+      <div class="wb" style="gap:12px">
+        <div class="grp" style="gap:7px"><div class="sec"><span class="k">CUSTOM</span><span class="okt ap" style="--t:1.4s">✓ 5 shops identified</span></div>
+          <div class="chips">
+            <span class="chip pick ap">Ridgeway CNC</span><span class="chip ap" style="--t:.2s">Bayline</span><span class="chip ap" style="--t:.4s">Coastline</span><span class="chip pick ap" style="--t:.6s">Northpoint Sheet Metal</span><span class="chip ap" style="--t:.8s">+1</span>
+          </div></div>
+        <div class="grp" style="gap:7px"><div class="sec"><span class="k">OFF-THE-SHELF</span><span class="okt ap" style="--t:1.6s">✓ 3 sources cover all 11</span></div>
+          <div class="chips">
+            <span class="chip pick ap" style="--t:.3s">Distributor A</span><span class="chip ap" style="--t:.5s">Distributor B</span><span class="chip pick ap" style="--t:.7s">Actuator maker</span>
+          </div></div>
+      </div>
+    </div>
+    <div class="hand" style="left:652px;top:400px;width:104px;font-size:20px">matched on process, material &amp; tolerance</div>
+  </div>
+
+  <div class="stage" data-s="2">
+    <svg class="ic" style="left:368px;top:546px" width="24" height="44"><use href="#i-down"/></svg>
+    <div class="sublab" style="left:6px;top:690px;width:104px"><b>3c</b><br>RFQs &amp; quotes</div>
+    <div class="win" style="top:610px;height:292px">
+      <div class="chrome"><i></i><i></i><i></i></div>
+      <div class="wb">
+        <div class="grp"><div class="sec"><span class="k">CUSTOM</span><span>RFQs sent to 5 · <span class="ap" style="--t:3.6s">4 quotes back</span></span></div>
+          <div class="row"><span class="f">Bracket ×4</span><span style="width:110px;color:var(--muted)">Ridgeway CNC</span><span class="ap" style="width:64px;font-weight:700;--t:3s">$744</span><span class="ap" style="width:46px;text-align:right;--t:3s">10 d</span></div>
+          <div class="row"><span class="f">Motor plate &amp; cover</span><span style="width:110px;color:var(--muted)">Northpoint</span><span class="ap" style="width:64px;font-weight:700;--t:3.2s">$1,180</span><span class="ap" style="width:46px;text-align:right;--t:3.2s">8 d</span></div></div>
+        <div class="grp"><div class="sec"><span class="k">OFF-THE-SHELF</span><span>stock &amp; price <span class="ap" style="--t:3.8s">confirmed</span></span></div>
+          <div class="row"><span class="f">Bearings &amp; fasteners</span><span style="width:110px;color:var(--muted)">Distributor A</span><span class="ap" style="width:64px;font-weight:700;--t:3.4s">$316</span><span class="ap" style="width:46px;text-align:right;--t:3.4s">2 d</span></div>
+          <div class="row"><span class="f">BLDC actuator ×2</span><span style="width:110px;color:var(--muted)">Actuator maker</span><span class="ap" style="width:64px;font-weight:700;--t:3.6s">$4,600</span><span class="ap" style="width:46px;text-align:right;--t:3.6s">6 d</span></div></div>
+        <div class="ap" style="display:flex;gap:10px;--t:4.2s">
+          <div class="stat"><span class="k">BUILD COST</span><span style="font-size:20px;font-weight:700">$6,840</span></div>
+          <div class="stat" style="flex:1.4"><span class="k">TIMELINE</span><span style="font-size:15px;font-weight:700">Parts by Dec 9 <span style="font-weight:500;color:var(--ok)">· 3-day buffer</span></span></div>
+        </div>
+      </div>
+    </div>
+    <svg class="ic" style="left:676px;top:618px" width="46" height="40"><use href="#i-factory"/></svg>
+    <div class="hand" style="left:672px;top:656px;font-size:18px">Ridgeway</div>
+    <svg class="ic" style="left:676px;top:690px" width="46" height="40"><use href="#i-factory"/></svg>
+    <div class="hand" style="left:668px;top:728px;font-size:18px">Northpoint</div>
+    <div class="hand" style="left:668px;top:748px;font-size:16px;color:var(--soft)">+3 shops</div>
+    <svg class="ic" style="left:674px;top:786px" width="50" height="40"><use href="#i-ware"/></svg>
+    <div class="hand" style="left:664px;top:824px;font-size:18px">distributors</div>
+    <svg class="ic p w tok" style="left:684px;top:626px;--fx:-94px;--fy:0px" width="30" height="20"><use href="#i-mail"/></svg>
+    <svg class="ic p w tok" style="left:684px;top:698px;--fx:-94px;--fy:-72px;--t:.25s" width="30" height="20"><use href="#i-mail"/></svg>
+    <div class="a tok" style="left:688px;top:794px;width:22px;height:22px;border-radius:50%;background:#fff;border:2px solid var(--acc);color:var(--acc);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;--fx:-98px;--fy:-94px;--t:.5s">?</div>
+    <div class="hand lbl" style="left:650px;top:584px;font-size:22px;color:var(--acc);--d:1.9s">RFQs out</div>
+    <div class="hand lbl" style="left:650px;top:584px;font-size:22px;color:var(--acc);--t:2s;--d:1.8s">quotes back</div>
+    <div class="a tok tag" style="left:498px;top:679px;--fx:192px;--fy:-49px;--t:2s">$$</div>
+    <div class="a tok tag" style="left:498px;top:713px;--fx:192px;--fy:-13px;--t:2.2s">$$</div>
+    <div class="a tok tag g" style="left:498px;top:774px;--fx:192px;--fy:21px;--t:2.4s">$$</div>
+    <div class="a tok tag g" style="left:498px;top:808px;--fx:192px;--fy:-13px;--t:2.6s">$$</div>
+  </div>
+  <div class="cap" style="top:920px">search, identify, RFQ: cost &amp; timeline for the whole build up front.</div>
+</div>
+</template>
+
+<template id="t4">
+<div class="step-root" style="height:980px">
+  <div class="pill"><b>4</b>Communicate DFM feedback (if any)</div>
+
+  <div class="stage" data-s="0">
+    <div class="sublab" style="left:6px;top:330px;width:104px"><b>4a</b><br>DFM flag</div>
+    <svg class="ic" style="left:352px;top:92px" width="56" height="48"><use href="#i-factory"/></svg>
+    <div class="hand" style="left:420px;top:104px;font-size:22px">Ridgeway CNC <span style="color:var(--soft)">(supplier)</span></div>
+    <svg class="ic" style="left:343px;top:144px" width="14" height="58" viewBox="0 0 14 58"><path d="M7 2 L7 54 M1 46 L7 55 L13 46"/></svg>
+    <div class="hand lbl" style="left:150px;top:152px;font-size:22px;color:var(--warn);--d:2s">DFM pushback</div>
+    <div class="a tok flag" style="left:308px;top:196px;--fx:0px;--fy:-70px">⚑ DFM flag</div>
+    <div class="win" style="top:210px;height:330px">
+      <div class="chrome"><i></i><i></i><i></i><span>sourcery › arm v2 › DFM review</span></div>
+      <div class="wb" style="flex-direction:row;gap:14px;padding-top:14px">
+        <div style="width:160px;flex:none;position:relative;border:1px solid var(--rule);border-radius:10px;background:var(--cadbg)">
+          <svg class="a" style="left:4px;top:40px" width="154" height="130" viewBox="0 0 154 130" aria-hidden="true">
+            <path class="cad" d="M10 115 L10 40 L60 40 L60 15 L144 15 L144 70 L100 70 L100 115 Z"/>
+            <circle class="cad" cx="120" cy="42" r="13"/>
+            <circle class="ap" cx="60" cy="40" r="8" style="fill:none;stroke:var(--risk);stroke-width:2.5;--t:1.3s"/>
+          </svg>
+          <div class="a ap" style="left:10px;bottom:10px;right:10px;font-size:11px;color:var(--warn);font-weight:600;--t:1.3s">Inside corner R0.5</div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:8px;min-width:0">
+          <div class="ap" style="font-size:12px;color:var(--muted);--t:1.2s">Ridgeway CNC flagged 2 items</div>
+          <div class="alert ap" style="--t:1.5s"><b>R0.5 inside corner needs EDM</b>Quote assumes R1.5. Keeping R0.5: <strong>+$38/part, +3 days</strong></div>
+          <div class="alert ap" style="--t:1.8s;border-color:var(--rule);background:var(--chrome)"><b>±0.01 on a non-mating face</b>Suggest ±0.05. Bore H7 untouched (critical).</div>
+          <div class="btns ap" style="--t:2.2s"><span class="btn pri">Send to engineer</span><span class="btn">Keep as drawn</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage" data-s="1">
+    <div class="sublab" style="left:6px;top:566px;width:200px"><b>4b</b><br>iterate with engineer</div>
+    <svg class="ic p" style="left:333px;top:546px" width="14" height="86" viewBox="0 0 14 86"><path d="M7 2 L7 80 M1 72 L7 81 L13 72"/></svg>
+    <svg class="ic" style="left:413px;top:546px" width="14" height="86" viewBox="0 0 14 86"><path d="M7 84 L7 6 M1 14 L7 5 L13 14"/></svg>
+    <svg class="ic p w tok" style="left:328px;top:612px;--fx:0px;--fy:-62px;--t:.6s" width="24" height="30"><use href="#i-doc"/></svg>
+    <div class="a tok" style="left:408px;top:556px;width:24px;height:24px;border-radius:50%;background:var(--ok);color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;--fx:0px;--fy:66px;--t:2.6s">✓</div>
+    <svg class="ic" style="left:348px;top:646px" width="64" height="72"><use href="#i-person"/></svg>
+    <div class="hand" style="left:348px;top:716px;font-size:22px">engineer</div>
+    <div class="bubble ap" style="left:28px;top:640px;width:290px;border-radius:12px 12px 2px 12px;background:var(--acc);color:#fff"><b>Sourcery:</b> Ridgeway can't hold R0.5 without EDM (+$38/part, +3 days). OK to open it to R1.5?</div>
+    <div class="bubble ap" style="left:444px;top:664px;width:270px;border-radius:12px 12px 12px 2px;background:var(--row);border:1.5px solid var(--line);--t:2s"><b>Engineer:</b> R1.5 is fine. Keep the bore at H7.</div>
+  </div>
+
+  <div class="stage" data-s="2">
+    <div class="sublab" style="left:652px;top:118px;width:108px"><b>4c</b><br>update to supplier</div>
+    <svg class="ic p" style="left:403px;top:144px" width="14" height="58" viewBox="0 0 14 58"><path d="M7 56 L7 4 M1 12 L7 3 L13 12"/></svg>
+    <div class="a ap" style="left:312px;top:466px;font-size:12px;font-weight:700;color:var(--ok);--t:.1s">✓ Engineer approved R1.5 · REV C sent to Ridgeway</div>
+    <svg class="ic p w tok" style="left:398px;top:108px;--fx:0px;--fy:92px;--t:.6s;--d:1.6s" width="24" height="30"><use href="#i-doc"/></svg>
+    <div class="hand ap" style="left:430px;top:156px;font-size:22px;color:var(--acc);--t:1.4s">updated drawing, REV C</div>
+  </div>
+  <div class="cap" style="top:800px">supplier pushback becomes one clear question; one reply closes the loop.</div>
+</div>
+</template>
+
+<template id="t5">
+<div class="step-root" style="height:980px">
+  <div class="pill"><b>5</b>Place orders with suppliers</div>
+
+  <div class="stage" data-s="0">
+    <div class="sublab" style="left:6px;top:200px;width:104px"><b>5a</b><br>pick quotes</div>
+    <div class="win" style="top:90px;height:340px">
+      <div class="chrome"><i></i><i></i><i></i><span>quotes in · pick one per part</span></div>
+      <div class="wb" style="padding-top:10px;gap:8px">
+        <div class="grp" style="gap:4px"><span style="font-size:12px;font-weight:700">Bracket ×4</span><div class="chips" style="gap:6px">
+          <span class="opt">○ Ridgeway $744 · 10d<span class="fill ap" style="--t:.3s">● Ridgeway $744 · 10d</span></span><span class="opt">○ Bayline $848 · 9d</span><span class="opt">○ Coastline $960 · 7d</span></div></div>
+        <div class="grp" style="gap:4px"><span style="font-size:12px;font-weight:700">Motor plate &amp; cover</span><div class="chips" style="gap:6px">
+          <span class="opt">○ Northpoint $1,180 · 8d<span class="fill ap" style="--t:.6s">● Northpoint $1,180 · 8d</span></span><span class="opt">○ Bayline $1,320 · 6d</span></div></div>
+        <div class="grp" style="gap:4px"><span style="font-size:12px;font-weight:700">Bearings &amp; fasteners</span><div class="chips" style="gap:6px">
+          <span class="opt">○ Distributor A $316 · 2d<span class="fill ap" style="--t:.9s">● Distributor A $316 · 2d</span></span><span class="opt">○ Distributor B $298 · 9d</span></div></div>
+        <div class="grp" style="gap:4px"><span style="font-size:12px;font-weight:700">BLDC actuator ×2</span><div class="chips" style="gap:6px">
+          <span class="opt">○ Actuator maker $4,600 · 6d<span class="fill ap" style="--t:1.2s">● Actuator maker $4,600 · 6d</span></span><span class="opt risky">○ Distributor B $4,350 · 21d</span></div></div>
+        <div class="ap" style="display:flex;gap:10px;margin-top:2px;--t:1.8s">
+          <div class="stat"><span class="k">BUILD COST</span><span style="font-size:18px;font-weight:700">$6,840</span></div>
+          <div class="stat" style="flex:1.5"><span class="k">TIMELINE RISK</span><span style="display:flex;align-items:center;gap:8px"><span class="meter"><i style="background:var(--ok)"></i><i></i><i></i></span><span style="font-size:13px;font-weight:700;color:var(--ok)">Low</span><span style="font-size:12px;color:var(--muted)">3-day buffer</span></span></div>
+        </div>
+      </div>
+    </div>
+    <div class="hand" style="left:648px;top:130px;width:110px;font-size:20px">you pick; best fit pre-selected</div>
+    <svg class="ic ap" style="left:566px;top:302px;--t:2.4s" width="82" height="30" viewBox="0 0 82 30"><path d="M80 16 C 60 10, 30 10, 4 15 M13 8 L3 15 L13 22"/></svg>
+    <div class="hand ap" style="left:648px;top:300px;width:110px;font-size:20px;color:var(--warn);--t:2.4s">$250 cheaper, but 21 days = high risk</div>
+  </div>
+
+  <div class="stage" data-s="1">
+    <svg class="ic" style="left:368px;top:436px" width="24" height="44"><use href="#i-down"/></svg>
+    <div class="sublab" style="left:6px;top:590px;width:104px"><b>5b</b><br>send POs</div>
+    <div class="win" style="top:486px;height:262px">
+      <div class="chrome"><i></i><i></i><i></i><span>orders</span></div>
+      <div class="wb" style="gap:6px">
+        <div class="th"><span style="flex:1">SUPPLIER</span><span style="width:140px">ITEMS</span><span style="width:60px">TOTAL</span><span style="width:18px"></span></div>
+        <div class="row"><span class="f" style="font-weight:600">Ridgeway CNC</span><span style="width:140px">Bracket ×4</span><span style="width:60px">$744</span><span class="ap" style="width:18px;color:var(--ok);font-weight:700;--t:1.5s">✓</span></div>
+        <div class="row"><span class="f" style="font-weight:600">Northpoint Sheet Metal</span><span style="width:140px">Motor plate, cover</span><span style="width:60px">$1,180</span><span class="ap" style="width:18px;color:var(--ok);font-weight:700;--t:1.7s">✓</span></div>
+        <div class="row"><span class="f" style="font-weight:600">Distributor A</span><span style="width:140px">Bearings, fasteners</span><span style="width:60px">$316</span><span class="ap" style="width:18px;color:var(--ok);font-weight:700;--t:1.9s">✓</span></div>
+        <div class="row"><span class="f" style="font-weight:600">Actuator maker</span><span style="width:140px">BLDC actuator ×2</span><span style="width:60px">$4,600</span><span class="ap" style="width:18px;color:var(--ok);font-weight:700;--t:2.1s">✓</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+          <div style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:700;font-size:15px">$6,840 · 4 POs</span><span style="font-size:12px;color:var(--muted)">Timeline risk <b style="color:var(--ok)">Low</b> · all due by Dec 9</span></div>
+          <div style="position:relative">
+            <div class="press"><span class="bt1">Approve &amp; send POs</span><span class="bt2">✓ Sent to 4 suppliers</span></div>
+            <svg class="a cursor" style="left:100px;top:20px" width="22" height="26" viewBox="0 0 22 26"><use href="#i-cursor" style="fill:var(--ink);stroke:#fff;stroke-width:1.5"/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+    <svg class="ic" style="left:676px;top:492px" width="40" height="34"><use href="#i-factory"/></svg>
+    <div class="hand" style="left:672px;top:524px;font-size:17px">Ridgeway</div>
+    <svg class="ic" style="left:676px;top:562px" width="40" height="34"><use href="#i-factory"/></svg>
+    <div class="hand" style="left:668px;top:594px;font-size:17px">Northpoint</div>
+    <svg class="ic" style="left:676px;top:632px" width="40" height="34"><use href="#i-ware"/></svg>
+    <div class="hand" style="left:666px;top:664px;font-size:17px">Distributor A</div>
+    <svg class="ic" style="left:676px;top:702px" width="40" height="34"><use href="#i-factory"/></svg>
+    <div class="hand" style="left:670px;top:734px;font-size:17px">Actuators</div>
+    <svg class="ic p w tok stay" style="left:650px;top:494px;--fx:-120px;--fy:211px;--t:1.3s" width="20" height="26"><use href="#i-doc"/></svg>
+    <svg class="ic p w tok stay" style="left:650px;top:564px;--fx:-120px;--fy:141px;--t:1.5s" width="20" height="26"><use href="#i-doc"/></svg>
+    <svg class="ic p w tok stay" style="left:650px;top:634px;--fx:-120px;--fy:71px;--t:1.7s" width="20" height="26"><use href="#i-doc"/></svg>
+    <svg class="ic p w tok stay" style="left:650px;top:704px;--fx:-120px;--fy:1px;--t:1.9s" width="20" height="26"><use href="#i-doc"/></svg>
+    <div class="hand ap" style="left:662px;top:760px;font-size:21px;color:var(--acc);--t:2.8s">4 POs out</div>
+  </div>
+  <div class="cap" style="top:920px">compare quotes per part and pick; one approval sends every PO.</div>
+</div>
+</template>
+
+<template id="t6">
+<div class="step-root" style="height:980px">
+  <div class="pill"><b>6</b>Closely monitor order progress &amp; provide updates</div>
+
+  <div class="stage" data-s="0">
+    <div class="sublab" style="left:34px;top:150px;width:84px"><b>6a</b><br>check in</div>
+    <div class="win" style="top:90px;height:170px">
+      <div class="chrome"><i></i><i></i><i></i><span>supplier check-ins · day 4</span></div>
+      <div class="wb" style="gap:6px">
+        <div class="th"><span style="width:110px">SUPPLIER</span><span style="width:60px">ASKED</span><span style="flex:1">REPLY</span></div>
+        <div class="row"><span style="width:110px;font-weight:600">Ridgeway</span><span style="width:60px;color:var(--muted)">9:00</span><span class="f ap" style="--t:2.8s">Machined; at anodize</span></div>
+        <div class="row"><span style="width:110px;font-weight:600">Northpoint</span><span style="width:60px;color:var(--muted)">9:00</span><span class="f ap" style="--t:3s">Bending done; powder coat Thu</span></div>
+        <div class="row"><span style="width:110px;font-weight:600">Actuator maker</span><span style="width:60px;color:var(--muted)">9:00</span><span class="f ap" style="--t:3.2s">Ships Monday</span></div>
+      </div>
+    </div>
+    <svg class="ic" style="left:676px;top:100px" width="44" height="38"><use href="#i-factory"/></svg>
+    <svg class="ic" style="left:676px;top:186px" width="44" height="38"><use href="#i-factory"/></svg>
+    <div class="hand" style="left:668px;top:226px;font-size:18px">suppliers</div>
+    <div class="a tok ask" style="left:666px;top:146px;--fx:-106px;--fy:0px;--d:1.6s">status?</div>
+    <div class="a tok" style="left:410px;top:170px;font-size:12px;font-weight:600;padding:3px 9px;border-radius:10px;background:var(--row);border:1.5px solid var(--line);white-space:nowrap;--fx:270px;--fy:-20px;--t:1.6s;--d:1.4s">replies</div>
+  </div>
+
+  <div class="stage" data-s="1">
+    <svg class="ic" style="left:368px;top:280px" width="24" height="44"><use href="#i-down"/></svg>
+    <div class="sublab" style="left:34px;top:390px;width:84px"><b>6b</b><br>update</div>
+    <div class="win" style="top:334px;height:172px">
+      <div class="chrome"><i></i><i></i><i></i><span>progress vs Dec 12 build</span></div>
+      <div class="wb">
+        <div class="grp" style="gap:4px"><div class="sec" style="font-size:13px;color:var(--ink)"><span style="font-weight:600">Shoulder bracket ×4</span><span style="color:var(--muted)">Anodize · ETA Dec 9</span></div><div style="height:8px;border-radius:4px;background:var(--tint);overflow:hidden"><div class="bar" style="--w:72%;height:8px;border-radius:4px;background:var(--acc)"></div></div></div>
+        <div class="grp" style="gap:4px"><div class="sec" style="font-size:13px;color:var(--ink)"><span style="font-weight:600">Motor plate &amp; cover</span><span style="color:var(--muted)">Powder coat · ETA Dec 9</span></div><div style="height:8px;border-radius:4px;background:var(--tint);overflow:hidden"><div class="bar" style="--w:60%;--t:.3s;height:8px;border-radius:4px;background:var(--acc)"></div></div></div>
+        <div class="grp" style="gap:4px"><div class="sec" style="font-size:13px;color:var(--ink)"><span style="font-weight:600">BLDC actuators ×2</span><span style="color:var(--muted)">Ships Mon · ETA Dec 8</span></div><div style="height:8px;border-radius:4px;background:var(--tint);overflow:hidden"><div class="bar" style="--w:92%;--t:.6s;height:8px;border-radius:4px;background:var(--acc)"></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage" data-s="2">
+    <svg class="ic" style="left:368px;top:524px" width="24" height="44"><use href="#i-down"/></svg>
+    <div class="sublab" style="left:34px;top:596px;width:84px"><b>6c</b><br>flag &amp; share</div>
+    <div class="win" style="top:578px;height:190px">
+      <div class="chrome"><i></i><i></i><i></i><span>timeline risk</span></div>
+      <div class="wb" style="gap:9px">
+        <div class="alert ap"><b>Anodize backlog at Ridgeway: brackets +2 days</b>New ETA Dec 11. Buffer to build drops from 3 days to 1.</div>
+        <div class="ap" style="display:flex;align-items:center;gap:8px;font-size:12px;--t:.6s"><span style="font-weight:700;letter-spacing:.04em;color:var(--acc2)">TIMELINE RISK</span><span class="meter"><i style="background:var(--risk)"></i><i style="background:var(--risk)"></i><i></i></span><span style="font-weight:700;color:var(--warn)">Low → Medium</span></div>
+        <div class="btns ap" style="--t:1s"><span class="btn pri">Expedite anodize (+$60)</span><span class="btn">Accept 1-day buffer</span></div>
+      </div>
+    </div>
+    <svg class="ic" style="left:662px;top:640px" width="96" height="54"><use href="#i-team"/></svg>
+    <div class="hand" style="left:654px;top:696px;width:110px;font-size:18px">your team #arm-build</div>
+    <div class="a tok stay bubble" style="left:650px;top:584px;width:106px;padding:5px 8px;font-size:11px;line-height:1.3;border-radius:9px 9px 9px 2px;background:var(--acc);color:#fff;--fx:-110px;--fy:100px;--t:1.6s;--d:1.6s">Brackets +2d. Still on track for Dec 12.</div>
+    <svg class="ic p ap" style="left:0;top:120px;--t:2.6s" width="120" height="700" viewBox="0 0 120 700"><path d="M112 556 L16 556 L16 30 L110 30 M100 22 L111 30 L100 38"/></svg>
+    <div class="hand ap" style="left:-92px;top:420px;width:100px;font-size:21px;color:var(--acc);text-align:right;--t:2.8s">repeat daily until it ships</div>
+  </div>
+  <div class="cap" style="top:920px">check in, update, flag what slips, tell the team. Repeat until it ships.</div>
+</div>
+</template>
+
+<template id="t7">
+<div class="step-root" style="height:620px">
+  <div class="pill"><b>7</b>Track shipments to delivery</div>
+  <div class="stage" data-s="0">
+    <div class="win" style="top:90px;height:340px">
+      <div class="chrome"><i></i><i></i><i></i><span>sourcery › arm v2 › shipments</span></div>
+      <div class="wb" style="gap:9px;padding-top:14px">
+        <div class="sec" style="font-size:13px"><span style="font-weight:700;color:var(--ink);font-size:14px">4 shipments</span><span>Build date: Dec 12</span></div>
+        <div class="grp" style="gap:4px"><div class="sec" style="font-size:13px;color:var(--ink)"><span>Brackets · trk ••4821</span><span style="font-weight:600">In transit · ETA Dec 8</span></div><div style="height:6px;border-radius:3px;background:var(--tint);overflow:hidden"><div class="bar" style="--w:60%;height:6px;border-radius:3px;background:var(--acc)"></div></div></div>
+        <div class="grp" style="gap:4px"><div class="sec" style="font-size:13px;color:var(--ink)"><span>Motor plates · trk ••1176</span><span style="font-weight:600">Picked up · ETA Dec 9</span></div><div style="height:6px;border-radius:3px;background:var(--tint);overflow:hidden"><div class="bar" style="--w:48%;--t:.3s;height:6px;border-radius:3px;background:var(--acc)"></div></div></div>
+        <div class="grp" style="gap:4px"><div class="sec" style="font-size:13px;color:var(--ink)"><span>Bearings, fasteners · trk ••0937</span><span style="font-weight:600;color:var(--ok)">Delivered</span></div><div style="height:6px;border-radius:3px;background:var(--tint);overflow:hidden"><div class="bar" style="--w:100%;--t:.6s;height:6px;border-radius:3px;background:var(--ok)"></div></div></div>
+        <div class="alert ap" style="--t:3s"><b style="display:inline">Actuators delayed 1 day</b> (now Dec 10). Still 2 days ahead of the Dec 12 build. No action needed.</div>
+      </div>
+    </div>
+    <svg class="a" style="left:0;top:0;overflow:visible" width="760" height="620" viewBox="0 0 760 620" aria-hidden="true"><path class="route" d="M185 495 C 280 470, 460 520, 565 492"/></svg>
+    <svg class="ic" style="left:118px;top:462px" width="64" height="54"><use href="#i-factory"/></svg>
+    <div class="hand" style="left:106px;top:516px;font-size:20px">Ridgeway CNC</div>
+    <svg class="ic" style="left:572px;top:452px" width="66" height="58"><use href="#i-lab"/></svg>
+    <div class="hand" style="left:576px;top:512px;font-size:20px;color:var(--ok)">your lab</div>
+    <svg class="ic w a truck" style="left:0;top:0" width="40" height="26"><use href="#i-truck"/></svg>
+  </div>
+  <div class="cap" style="top:560px">every tracking number watched; delays judged against the build date.</div>
+</div>
+</template>
+
+<template id="t8">
+<div class="step-root" style="height:620px">
+  <div class="pill you"><b>8</b>Parts arrive at your facility</div>
+  <div class="stage" data-s="0">
+    <div class="win" style="top:90px;height:340px">
+      <div class="chrome"><i></i><i></i><i></i><span>sourcery › arm v2 › receiving</span></div>
+      <div class="wb" style="gap:7px;padding-top:14px">
+        <div class="sec"><span style="font-size:15px;font-weight:700;color:var(--ink)">14 / 14 received</span><span class="ap" style="font-size:12px;font-weight:700;color:#fff;background:var(--ok);padding:4px 10px;border-radius:12px;--t:2.6s">Ready for Dec 12 build</span></div>
+        <div class="row"><span class="ap" style="width:20px;height:20px;border-radius:5px;background:var(--ok);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;--t:1.2s">✓</span><span class="f">Shoulder bracket ×4</span><span style="color:var(--muted)">Bore H7 checked</span></div>
+        <div class="row"><span class="ap" style="width:20px;height:20px;border-radius:5px;background:var(--ok);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;--t:1.5s">✓</span><span class="f">Motor plate &amp; cover ×8</span><span style="color:var(--muted)">Dec 9</span></div>
+        <div class="row"><span class="ap" style="width:20px;height:20px;border-radius:5px;background:var(--ok);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;--t:1.8s">✓</span><span class="f">Bearings &amp; fasteners</span><span style="color:var(--muted)">Dec 5</span></div>
+        <div class="row"><span class="ap" style="width:20px;height:20px;border-radius:5px;background:var(--ok);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;--t:2.1s">✓</span><span class="f">BLDC actuator ×2</span><span style="color:var(--muted)">Dec 10</span></div>
+        <div class="ap" style="font-size:12px;color:var(--muted);padding:2px;--t:3s">Quotes, POs, DFM decisions &amp; supplier notes saved to the arm v2 record for next time.</div>
+      </div>
+    </div>
+    <svg class="ic" style="left:250px;top:470px" width="230" height="74" viewBox="0 0 230 74"><path d="M4 30 L226 30 M16 30 L16 70 M214 30 L214 70 M180 30 L180 16 L194 4 L208 10 M208 10 L214 6 M208 10 L212 16"/><rect x="172" y="24" width="16" height="6"/></svg>
+    <div class="hand" style="left:496px;top:496px;font-size:21px">your bench</div>
+    <div class="hand" style="left:4px;top:520px;font-size:20px">from the truck</div>
+    <svg class="ic p w tok stay" style="left:270px;top:466px;--fx:-260px;--fy:30px" width="32" height="34"><use href="#i-box"/></svg>
+    <svg class="ic p w tok stay" style="left:310px;top:466px;--fx:-300px;--fy:30px;--t:.25s" width="32" height="34"><use href="#i-box"/></svg>
+    <svg class="ic p w tok stay" style="left:350px;top:466px;--fx:-340px;--fy:30px;--t:.5s" width="32" height="34"><use href="#i-box"/></svg>
+    <svg class="ic p w tok stay" style="left:390px;top:466px;--fx:-380px;--fy:30px;--t:.75s" width="32" height="34"><use href="#i-box"/></svg>
+  </div>
+  <div class="cap" style="top:560px">everything lands, checked against the BOM. Back to building.</div>
+</div>
+</template>
+
+<script>
+(function(){
+  var STEPS=[
+    {n:1,title:"You create CAD & Drawings",desc:"The engineer finalizes the CAD model, drawings and BOM for the build."},
+    {n:2,title:"Upload documentation package to portal",desc:"Package the STEP files, drawings and BOM and get them to suppliers or a sourcing portal."},
+    {n:3,title:"Find suppliers for custom & off-the-shelf parts",desc:"Search for shops and distributors, send RFQs and collect quotes."},
+    {n:4,title:"Communicate DFM feedback (if any)",desc:"Suppliers push back on features that are hard or costly to make; the engineer revises."},
+    {n:5,title:"Place orders with suppliers",desc:"Compare quotes, choose a supplier for each part and issue POs."},
+    {n:6,title:"Closely monitor order progress & provide updates",desc:"Chase suppliers for status and keep the team updated when things slip."},
+    {n:7,title:"Track shipments to delivery",desc:"Follow tracking numbers and catch delays before the build date."},
+    {n:8,title:"Parts arrive at your facility",desc:"Receive the parts, check them against the BOM and start the build."}
+  ];
+
+  function el(id){return document.getElementById(id)}
+  function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;")}
+  function cloneStep(n){return el("t"+n).content.firstElementChild.cloneNode(true)}
+
+  /* home */
+  el("grid8").innerHTML=STEPS.map(function(s){
+    return '<li><a class="card" href="#step-'+s.n+'"><span class="num">'+s.n+'</span>'+esc(s.title).replace(/-/g,"‑")+'</a></li>';
+  }).join("");
+  function draw45(){
+    var g=el("grid8"), li=g.children; if(el("v-home").hidden||li.length<5)return;
+    var w=g.getBoundingClientRect(), a=li[3].getBoundingClientRect(), b=li[4].getBoundingClientRect();
+    if(Math.abs(a.top-b.top)<5){el("p45").setAttribute("d","");el("h45").setAttribute("d","");return}
+    var x1=a.right-w.left, y1=a.top-w.top+a.height/2, xr=x1+28, ym=(a.bottom+b.top)/2-w.top, xl=b.left-w.left-28, y2=b.top-w.top+b.height/2, x2=b.left-w.left-8;
+    el("p45").setAttribute("d","M"+x1+" "+y1+" L"+xr+" "+y1+" L"+xr+" "+ym+" L"+xl+" "+ym+" L"+xl+" "+y2+" L"+(x2-6)+" "+y2);
+    el("h45").setAttribute("d","M"+(x2+2)+" "+y2+" L"+(x2-10)+" "+(y2-7)+" L"+(x2-10)+" "+(y2+7)+" Z");
+  }
+  window.addEventListener("resize",draw45);
+
+  /* strip */
+  el("strip").innerHTML=STEPS.map(function(s){return '<a href="#step-'+s.n+'" aria-label="Step '+s.n+': '+esc(s.title)+'">'+s.n+'</a>'}).join("");
+
+  /* board (static, all screens in finished state) */
+  var boardBuilt=false;
+  function buildBoard(){
+    if(boardBuilt)return; boardBuilt=true;
+    var b=el("board"), svg='<svg class="a" style="left:0;top:0" width="6940" height="80" aria-hidden="true">';
+    STEPS.forEach(function(s,i){
+      var root=cloneStep(s.n); root.style.left=(80+i*860)+"px";
+      root.querySelectorAll(".stage").forEach(function(st){st.classList.add("shown","done")});
+      b.appendChild(root);
+      if(i<7){var x1=80+i*860+650,x2=80+(i+1)*860+108;
+        svg+='<path d="M'+x1+' 40 L'+x2+' 40" style="fill:none;stroke:var(--line);stroke-width:3;stroke-dasharray:10 6;stroke-linecap:round"/><path d="M'+(x2+12)+' 40 L'+(x2-2)+' 31 L'+(x2-2)+' 49 Z" style="fill:var(--line)"/>';}
+    });
+    b.insertAdjacentHTML("afterbegin",svg+"</svg>");
+    setZoom(0.75);
+  }
+  function setZoom(z){
+    el("board").style.transform="scale("+z+")";
+    el("boardSize").style.width=(6940*z)+"px"; el("boardSize").style.height=(1000*z)+"px";
+    document.querySelectorAll(".zoom button").forEach(function(btn){btn.setAttribute("aria-pressed",String(+btn.dataset.z===z))});
+  }
+  document.querySelectorAll(".zoom button").forEach(function(btn){btn.addEventListener("click",function(){setZoom(+btn.dataset.z)})});
+
+  /* step walk-through */
+  var cur={n:0,idx:0,stages:[]}, autoplay=false;
+  function mountStep(n){
+    var c=el("stepCanvas"); c.innerHTML=""; var root=cloneStep(n); c.appendChild(root);
+    cur={n:n,idx:0,stages:Array.prototype.slice.call(root.querySelectorAll(".stage"))};
+    cur.stages[0].classList.add("shown");
+    document.querySelectorAll("#strip a").forEach(function(a,i){ if(i+1===n)a.setAttribute("aria-current","step"); else a.removeAttribute("aria-current")});
+    window.scrollTo(0,0); updateControls();
+    autoplay=false; var playFor=n; setTimeout(function(){ if(cur.n===playFor&&cur.idx===0)play(); },400);
+  }
+  function updateControls(){
+    var last=cur.idx===cur.stages.length-1, st=cur.stages[cur.idx];
+    el("bNext").textContent=last?(cur.n<8?"Step "+(cur.n+1)+" →":"Full whiteboard →"):"Next screen →";
+    el("bBack").textContent=cur.idx>0?"← Back":(cur.n>1?"← Step "+(cur.n-1):"← Overview");
+    el("bPlay").textContent=st.classList.contains("done")||st.classList.contains("playing")?"↻ Replay":"▶ Play";
+    el("where").textContent=cur.stages.length>1?"screen "+(cur.idx+1)+" of "+cur.stages.length:"1 screen";
+  }
+  function play(){
+    var st=cur.stages[cur.idx]; st.classList.remove("done","playing"); void st.offsetWidth; st.classList.add("playing"); updateControls();
+    var anims=st.getAnimations?st.getAnimations({subtree:true}):[];
+    Promise.all(anims.map(function(a){return a.finished})).then(function(){
+      if(st.classList.contains("playing")){st.classList.remove("playing");st.classList.add("done");}
+    }).catch(function(){});
+  }
+  function next(){
+    if(cur.idx<cur.stages.length-1){
+      var st=cur.stages[cur.idx]; st.classList.remove("playing"); st.classList.add("done");
+      cur.idx++; var nx=cur.stages[cur.idx]; nx.classList.add("shown");
+      var target=nx.querySelector(".win"); if(target)target.scrollIntoView({behavior:"smooth",block:"center"});
+      updateControls(); setTimeout(play,400);
+    } else {autoplay=cur.n<8; location.hash=cur.n<8?"step-"+(cur.n+1):"board";}
+  }
+  function back(){
+    if(cur.idx>0){
+      var st=cur.stages[cur.idx]; st.classList.remove("shown","done","playing");
+      cur.idx--; var pv=cur.stages[cur.idx].querySelector(".win"); if(pv)pv.scrollIntoView({behavior:"smooth",block:"center"});
+      updateControls();
+    } else location.hash=cur.n>1?"step-"+(cur.n-1):"home";
+  }
+  el("bPlay").addEventListener("click",play);
+  el("bNext").addEventListener("click",next);
+  el("bBack").addEventListener("click",back);
+  document.addEventListener("keydown",function(e){
+    if(e.metaKey||e.ctrlKey||e.altKey)return;
+    if(e.key==="Escape"){location.hash="home";return}
+    if(el("v-step").hidden)return;
+    if(e.key==="ArrowRight"||e.key===" "){e.preventDefault();next()}
+    else if(e.key==="ArrowLeft"){e.preventDefault();back()}
+    else if(e.key==="p"||e.key==="P"){e.preventDefault();play()}
+  });
+
+  /* routing */
+  function route(){
+    var h=(location.hash||"").slice(1), m=/^step-([1-8])$/.exec(h), view=m?"step":(h==="board"?"board":"home");
+    ["home","step","board"].forEach(function(v){el("v-"+v).hidden=v!==view});
+    document.querySelectorAll("[data-nav]").forEach(function(a){ if(a.dataset.nav===view)a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current")});
+    if(view==="step")mountStep(+m[1]);
+    else if(view==="board"){buildBoard();window.scrollTo(0,0)}
+    else {window.scrollTo(0,0);requestAnimationFrame(draw45);if(document.fonts)document.fonts.ready.then(draw45)}
+  }
+  window.addEventListener("hashchange",route); route();
+})();
+</script>
+
+</body></html>
